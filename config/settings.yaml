@@ -1,0 +1,5 @@
+database_url: ${DATABASE_URL}
+contract_id: DEMO
+feature_window_months: 6
+label_horizon_months: 3
+random_seed: 7
