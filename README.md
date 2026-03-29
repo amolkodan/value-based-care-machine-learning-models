@@ -1,6 +1,6 @@
-# carevalue-claims-ml
+# Open Sourced Value Based Care ML Models
 
-`carevalue-claims-ml` is an open-source, cloud-agnostic healthtech intelligence stack for value-based care (VBC) organizations that need clinically interpretable, contract-aware, and governance-ready machine learning over longitudinal claims data.
+`Open Sourced Value Based Care ML Models` is an open-source, cloud-agnostic healthtech intelligence stack for value-based care (VBC) organizations that need clinically interpretable, contract-aware, and governance-ready machine learning over longitudinal claims data.
 
 The platform is designed for payer and provider analytics teams operating PMPM and shared-savings contracts, with extensible workflows for member-month feature stores, multi-model risk and cost prediction, intervention prioritization, policy simulation, and agentic recommendation orchestration.
 
@@ -15,7 +15,7 @@ The platform is designed for payer and provider analytics teams operating PMPM a
 ## Healthcare claims ontology and glossary
 
 - **Eligibility month**: covered member period used as denominator for PMPM analytics.
-- **Claim header**: episode-level claim envelope including claim type, servicing provider, and aggregate allowed amount.
+- **Claim header**: bundled treatment packages claim envelope including claim type, servicing provider, and aggregate allowed amount.
 - **Claim line**: service-level granularity (CPT/HCPCS, revenue code, POS) used for utilization signatures.
 - **ICD-10 diagnosis**: coded condition context used for morbidity proxies.
 - **PMPM**: per member per month spend benchmark.
