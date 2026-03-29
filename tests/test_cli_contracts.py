@@ -60,6 +60,19 @@ def test_cli_leaderboard_and_policy(tmp_path: Path):
     payload = json.loads((tmp_path / "policy.json").read_text(encoding="utf-8"))
     assert payload["members_targeted"] == 2.0
 
+    recs_path = tmp_path / "recs.csv"
+    pd.read_csv(pred_path).assign(recommended_action="care_navigation_call").to_csv(recs_path, index=False)
+    res_scenario = runner.invoke(app, ["policy", "scenario", str(recs_path), "--output-path", str(tmp_path / "scn.json")])
+    assert res_scenario.exit_code == 0
+    assert (tmp_path / "scn.json").exists()
+
+    res_enforce = runner.invoke(
+        app,
+        ["policy", "enforce", str(recs_path), "--output-path", str(tmp_path / "enforced.csv"), "--outreach-budget", "1"],
+    )
+    assert res_enforce.exit_code == 0
+    assert (tmp_path / "enforced.csv").exists()
+
 
 def test_cli_agents_run_validate_and_eval(tmp_path: Path):
     pred_path = tmp_path / "pred.csv"

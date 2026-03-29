@@ -53,3 +53,11 @@ def test_train_model_suite_writes_artifacts(tmp_path: Path):
         assert result.artifact_path.exists()
         metadata = tmp_path / f"{result.model_name}_{result.run_id}.metadata.json"
         assert metadata.exists()
+
+
+def test_train_model_suite_family_selection(tmp_path: Path):
+    features = _toy_features()
+    labels = _toy_labels(features)
+    selected = ["risk_high_cost", "anomaly_cost_spike", "contract_sensitive_ranker"]
+    results = train_model_suite(features, labels, tmp_path, suite="maximal", model_families=selected)
+    assert set(results.keys()) == set(selected)

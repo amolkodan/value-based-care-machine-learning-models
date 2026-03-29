@@ -33,6 +33,7 @@ from carevalue_claims_ml.agent_orchestrator import (
 )
 from carevalue_claims_ml.agent_contracts import AgentHandoffContract, validate_handoff_contract
 from carevalue_claims_ml.llm_optional import deterministic_postprocess, retrieve_reference_context
+from carevalue_claims_ml.insurance_policy import InsurancePolicyConfig, apply_contract_constraints, run_policy_scenarios
 from carevalue_claims_ml.policy_simulation import evaluate_agent_strategy, simulate_policy
 from carevalue_claims_ml.reporting import write_summary_report
 
@@ -123,6 +124,7 @@ def models_train(
 @models_app.command("train-suite")
 def models_train_suite(
     suite: str = "maximal",
+    families: str = "",
     settings_path: Path = Path("config/settings.yaml"),
     output_dir: Path = Path("models"),
     database_url: str | None = None,
@@ -131,7 +133,14 @@ def models_train_suite(
     engine = create_db_engine(get_database_url(database_url or settings.database_url))
     features_df = build_member_month_features(engine, settings.feature_window_months)
     labels_df = build_high_cost_label(engine, settings.label_horizon_months)
-    results = train_model_suite(features_df, labels_df, output_dir=output_dir, suite=suite)
+    family_list = [f.strip() for f in families.split(",") if f.strip()] if families else settings.model_families
+    results = train_model_suite(
+        features_df,
+        labels_df,
+        output_dir=output_dir,
+        suite=suite,
+        model_families=family_list,
+    )
     payload = {
         name: {"metrics": res.metrics, "artifact": str(res.artifact_path), "run_id": res.run_id}
         for name, res in results.items()
@@ -233,19 +242,63 @@ def policy_simulate(
     print({"policy_metrics": metrics, "output": str(output_path)})
 
 
+@policy_app.command("scenario")
+def policy_scenario(
+    recommendations_path: Path,
+    output_path: Path = Path("reports/policy_scenarios.json"),
+):
+    recs = pd.read_csv(recommendations_path)
+    scenarios = run_policy_scenarios(recs)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(scenarios, indent=2), encoding="utf-8")
+    print({"policy_scenarios": scenarios, "output": str(output_path)})
+
+
+@policy_app.command("enforce")
+def policy_enforce(
+    recommendations_path: Path,
+    output_path: Path = Path("reports/recommendations_policy_enforced.csv"),
+    shared_savings_rate: float = 0.5,
+    downside_cap: float = 50000.0,
+    outreach_budget: int = 100,
+):
+    recs = pd.read_csv(recommendations_path)
+    constrained = apply_contract_constraints(
+        recs,
+        InsurancePolicyConfig(
+            shared_savings_rate=float(shared_savings_rate),
+            downside_cap=float(downside_cap),
+            outreach_budget=int(outreach_budget),
+        ),
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    constrained.to_csv(output_path, index=False)
+    print({"policy_enforced_output": str(output_path), "rows": len(constrained)})
+
+
 @agents_app.command("run")
 def agents_run(
     scores_path: Path,
     output_path: Path = Path("reports/agent_recommendations.csv"),
     audit_path: Path = Path("reports/agent_audit.csv"),
     contract_path: Path = Path("reports/agent_handoff_contract.json"),
+    run_id: str = "manual",
+    contract_id: str = "DEMO",
 ):
     scored = pd.read_csv(scores_path)
     recs = run_agentic_pipeline(scored)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     recs.to_csv(output_path, index=False)
     audit = generate_audit_log(recs, {"alerts": "none"}, audit_path)
-    contract = build_handoff_contract("agents_run_output", recs)
+    contract = build_handoff_contract(
+        "agents_run_output",
+        recs,
+        run_id=run_id,
+        contract_id=contract_id,
+        policy_version="insurance_v1",
+        upstream_stage_ids=["cohort_detection", "risk_triage", "care_gap", "contract_impact"],
+        quality_status="ok",
+    )
     write_contract(contract, contract_path)
     print(
         {
@@ -265,6 +318,12 @@ def agents_validate_contract(contract_path: Path):
         stage=str(payload["stage"]),
         payload=list(payload["payload"]),
         version=str(payload["version"]),
+        run_id=str(payload.get("run_id", "manual")),
+        contract_id=str(payload.get("contract_id", "DEMO")),
+        policy_version=str(payload.get("policy_version", "v1")),
+        upstream_stage_ids=list(payload.get("upstream_stage_ids", [])),
+        quality_status=str(payload.get("quality_status", "ok")),
+        generated_at=str(payload.get("generated_at", "")),
     )
     validate_handoff_contract(contract)
     print({"contract": str(contract_path), "valid": True})

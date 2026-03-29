@@ -9,6 +9,7 @@ __all__ = [
     "llm_optional",
     "memory_store",
     "models",
+    "insurance_policy",
     "policy_simulation",
     "reporting",
 ]

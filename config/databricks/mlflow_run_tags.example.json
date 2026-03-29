@@ -8,5 +8,7 @@
   "agent_policy_name": "recommendation_only_v1",
   "guardrail_profile": "safety_default",
   "contract_version": "v1",
-  "agent_eval_window": "retrospective_12m"
+  "agent_eval_window": "retrospective_12m",
+  "policy_scenario": "base",
+  "stage_replay_enabled": "true"
 }

@@ -45,7 +45,17 @@ def test_contract_build_validate_write(tmp_path: Path):
     out = tmp_path / "contract.json"
     write_contract(contract, out)
     payload = json.loads(out.read_text(encoding="utf-8"))
-    loaded = AgentHandoffContract(stage=payload["stage"], payload=payload["payload"], version=payload["version"])
+    loaded = AgentHandoffContract(
+        stage=payload["stage"],
+        payload=payload["payload"],
+        version=payload["version"],
+        run_id=payload["run_id"],
+        contract_id=payload["contract_id"],
+        policy_version=payload["policy_version"],
+        upstream_stage_ids=payload["upstream_stage_ids"],
+        quality_status=payload["quality_status"],
+        generated_at=payload["generated_at"],
+    )
     validate_handoff_contract(loaded)
 
 

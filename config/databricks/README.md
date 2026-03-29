@@ -24,6 +24,8 @@ for teams that want Databricks-compatible conventions without changing core code
 
 - Run agent-vs-baseline evaluations as batch jobs over historical scoring snapshots.
 - Store cohort partitions by month and contract for replayable simulation windows.
+- Track policy scenario runs (`optimistic`, `base`, `stress`) as separate experiment groups.
+- Persist stage-level contracts to support replay and post-mortem auditability.
 
 ### Delta conventions
 

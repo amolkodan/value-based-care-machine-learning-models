@@ -7,7 +7,7 @@ import json
 
 import pandas as pd
 
-from carevalue_claims_ml.agent_contracts import AgentHandoffContract, validate_handoff_contract
+from carevalue_claims_ml.agent_contracts import AgentHandoffContract, now_utc_iso, validate_handoff_contract
 from carevalue_claims_ml.memory_store import SharedContextStore
 
 
@@ -154,12 +154,32 @@ def run_agentic_pipeline(
     bounded = _apply_guardrails(impacts, active_guardrails)
     context.set("latest_quality", quality)
     context.set("latest_guardrails", asdict(active_guardrails))
+    context.append_event("quality_gate", {"quality": quality})
+    context.append_event("guardrail_application", {"rows": len(bounded)})
     return bounded
 
 
-def build_handoff_contract(stage: str, records: pd.DataFrame) -> AgentHandoffContract:
+def build_handoff_contract(
+    stage: str,
+    records: pd.DataFrame,
+    run_id: str = "manual",
+    contract_id: str = "DEMO",
+    policy_version: str = "v1",
+    upstream_stage_ids: list[str] | None = None,
+    quality_status: str = "ok",
+) -> AgentHandoffContract:
     payload = records.head(25).to_dict(orient="records")
-    contract = AgentHandoffContract(stage=stage, payload=payload, version="v1")
+    contract = AgentHandoffContract(
+        stage=stage,
+        payload=payload,
+        version="v1",
+        run_id=run_id,
+        contract_id=contract_id,
+        policy_version=policy_version,
+        upstream_stage_ids=upstream_stage_ids or [],
+        quality_status=quality_status,
+        generated_at=now_utc_iso(),
+    )
     validate_handoff_contract(contract)
     return contract
 

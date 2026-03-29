@@ -3,3 +3,19 @@ contract_id: DEMO
 feature_window_months: 6
 label_horizon_months: 3
 random_seed: 7
+model_families:
+  - risk_high_cost
+  - cost_forecast
+  - risk_advanced
+  - risk_temporal
+  - cost_interval
+  - uplift_proxy
+  - anomaly_cost_spike
+  - risk_trajectory_segment
+  - uplift_stronger
+  - contract_sensitive_ranker
+model_params:
+  contract_sensitive_ranker:
+    contract_weight: 1.2
+  anomaly_cost_spike:
+    contamination: 0.1

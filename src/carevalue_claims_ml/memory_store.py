@@ -4,6 +4,7 @@ from __future__ import annotations
 class SharedContextStore:
     def __init__(self):
         self._store: dict[str, object] = {}
+        self._events: list[dict[str, object]] = []
 
     def set(self, key: str, value: object) -> None:
         self._store[key] = value
@@ -13,3 +14,9 @@ class SharedContextStore:
 
     def snapshot(self) -> dict[str, object]:
         return dict(self._store)
+
+    def append_event(self, stage: str, payload: dict[str, object]) -> None:
+        self._events.append({"stage": stage, "payload": payload})
+
+    def events(self) -> list[dict[str, object]]:
+        return list(self._events)

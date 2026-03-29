@@ -75,18 +75,109 @@ Synthetic data is for benchmarking and reproducibility, not epidemiologic preval
 - Baseline calibrated high-cost risk model.
 - Advanced stacked risk ensemble with uncertainty-aware triage scoring.
 - Temporal risk model with time-series cross-validation.
+- Risk trajectory segmentation model for cohort planning.
+- Fairness-aware risk calibration variant for protected-population review.
 
 ### Cost intelligence
 - Baseline cost regression.
 - Quantile interval model (q10, q50, q90) for uncertainty-aware forecasting.
+- Anomaly-based cost spike detector for outlier surveillance.
+- Contract-sensitive ranking model for payer intervention sequencing.
 
 ### Intervention intelligence
 - Uplift proxy model for outreach prioritization.
+- Stronger uplift variant for treatment-response stratification.
 - Contract impact projection including expected PMPM delta and shared-savings proxy.
 
 ### Policy intelligence
 - Budget-constrained policy simulation for outreach allocation.
 - Safety envelope with abstain and max outreach logic.
+- Insurance contract scenario simulation (`optimistic`, `base`, `stress`).
+- Policy constraint enforcement for shared-savings, downside caps, and risk corridor behavior.
+
+## Real-World Insurance Use Cases
+
+These examples show how payer analytics and value-based care operations teams can apply the current stack in real workflows.
+
+### 1) Prospective high-cost member stratification for case management
+- **Business problem**: Identify members likely to become high-cost in the next horizon before avoidable spend accelerates.
+- **How this repo supports it**: High-cost risk models plus temporal validation (`models train-suite` and risk outputs).
+- **Operational output**: Ranked member risk scores and model leaderboard artifacts.
+- **Expected KPI impact**: Better risk capture precision, lower avoidable PMPM growth, improved care manager targeting yield.
+
+### 2) Outreach queue optimization under fixed nurse capacity
+- **Business problem**: Care teams cannot contact every flagged member each month.
+- **How this repo supports it**: Policy simulation and recommendation guardrails (`policy simulate`, agent max outreach logic).
+- **Operational output**: Capacity-constrained intervention list with abstain paths for overflow.
+- **Expected KPI impact**: Higher interventions per FTE and stronger budget adherence.
+
+### 3) Intervention prioritization using uplift-style targeting
+- **Business problem**: Not all high-risk members respond equally to outreach.
+- **How this repo supports it**: Uplift proxy model and `careGapAgent` eligibility gating.
+- **Operational output**: Action-specific recommendations (`care_navigation_call`, `pharmacy_followup`, `digital_nudge`, abstain).
+- **Expected KPI impact**: Higher intervention precision and improved ROI of care-management spend.
+
+### 4) PMPM trend surveillance and contract early warning
+- **Business problem**: Payers need early signal when PMPM trend drifts above target in shared-risk contracts.
+- **How this repo supports it**: Benchmarks + summary reporting + contract impact agent outputs.
+- **Operational output**: PMPM and trend outputs with expected contract delta projections.
+- **Expected KPI impact**: Faster variance mitigation and improved forecastability of year-end performance.
+
+### 5) Shared-savings and downside-risk forecasting
+- **Business problem**: Finance and actuarial teams need scenario-level visibility into savings likelihood.
+- **How this repo supports it**: Contract scoring, cost forecasts, and policy simulation outputs.
+- **Operational output**: Expected PMPM delta and shared-savings impact proxies by recommended action cohort.
+- **Expected KPI impact**: Better reserve planning and improved contracting strategy decisions.
+
+### 6) Fairness-aware triage for vulnerable populations
+- **Business problem**: Risk models can under-serve vulnerable groups without explicit equity checks.
+- **How this repo supports it**: Subgroup fairness slicing and vulnerable-member protection rules in orchestration.
+- **Operational output**: Slice-level evaluation plus adjusted recommendation behavior for protected cohorts.
+- **Expected KPI impact**: Reduced fairness deltas and stronger compliance posture.
+
+### 7) Data quality gating before model-driven operations
+- **Business problem**: Bad upstream data can produce unstable intervention queues.
+- **How this repo supports it**: `dataQualityAgent` drift/missingness/schema anomaly checks.
+- **Operational output**: Quality alerts and auditable gate status before recommendations are consumed.
+- **Expected KPI impact**: Fewer operational misfires caused by data defects.
+
+### 8) Utilization management signal enrichment
+- **Business problem**: UM teams need member-level risk context to prioritize outreach or review workflows.
+- **How this repo supports it**: Risk + cost + temporal model stack and member-month feature lineage.
+- **Operational output**: Structured risk and expected cost signals aligned to member-month records.
+- **Expected KPI impact**: Earlier high-risk intervention opportunity and better alignment between UM and care management.
+
+### 9) Pharmacy and chronic condition follow-up planning
+- **Business problem**: Medication adherence and chronic burden patterns need proactive outreach stratification.
+- **How this repo supports it**: Synthetic member context fields, intervention history, and `careGapAgent` action mapping.
+- **Operational output**: Follow-up queues for pharmacy and care-navigation actions with rationale traces.
+- **Expected KPI impact**: Better chronic population engagement and reduced acute utilization leakage.
+
+### 10) Audit-ready recommendation governance for payer operations
+- **Business problem**: Clinical operations and compliance teams need traceability for each recommendation.
+- **How this repo supports it**: Deterministic JSON contracts, recommendation-only mode, and `why`/`why_not` audit logs.
+- **Operational output**: Reproducible handoff artifacts and audit CSV outputs for governance review.
+- **Expected KPI impact**: Improved model governance readiness and lower operational risk.
+
+### 11) Contract-specific cohort strategy design
+- **Business problem**: Different payer contracts require different intervention thresholds and action mixes.
+- **How this repo supports it**: Configurable thresholds and scoring workflows with contract-aware reporting context.
+- **Operational output**: Cohort-specific recommendation sets and benchmark comparisons per contract frame.
+- **Expected KPI impact**: Better contract-level strategy fit and stronger medical cost containment.
+
+### 12) Human-in-the-loop decision support for care operations
+- **Business problem**: Teams need AI support without autonomous clinical action.
+- **How this repo supports it**: Recommendation-only guardrails, abstain behavior, and optional deterministic LLM post-processing.
+- **Operational output**: Decision-support recommendations for coordinator review, not autonomous execution.
+- **Expected KPI impact**: Faster operational triage while preserving clinical governance controls.
+
+### Use Case to Artifact Map
+
+- High-cost stratification -> `reports/leaderboard.csv`, model artifact metadata JSON
+- Outreach prioritization -> `reports/agent_recommendations.csv`
+- Audit and compliance review -> `reports/agent_audit.csv`, `reports/agent_handoff_contract.json`
+- Policy scenario planning -> `reports/policy_scenarios.json`
+- Contract-constrained recommendation output -> `reports/recommendations_policy_enforced.csv`
 
 ## Agentic decision orchestration
 
@@ -96,6 +187,15 @@ Synthetic data is for benchmarking and reproducibility, not epidemiologic preval
 - `careGapAgent`: intervention recommendation with uplift and eligibility gates.
 - `contractImpactAgent`: PMPM and shared-savings impact projection.
 - `dataQualityAgent`: drift, missingness, and schema anomaly checks.
+
+### Stage narrative (operational flow)
+
+1. `dataQualityAgent` checks schema and missingness before decisions.
+2. `riskTriageAgent` creates risk-priority cohorts with uncertainty weighting.
+3. `careGapAgent` proposes intervention classes with eligibility and uplift constraints.
+4. `contractImpactAgent` estimates PMPM and shared-savings deltas.
+5. Guardrails enforce recommendation-only behavior and abstain paths.
+6. Deterministic contracts and audit traces are emitted for governance review.
 
 ### Safety guardrails
 
@@ -139,9 +239,27 @@ carevalue-ml models leaderboard reports/predictions.csv --model-name risk_v2 --r
 
 # Policy and agentic workflows
 carevalue-ml policy simulate reports/predictions.csv --budget 100
+carevalue-ml policy scenario reports/agent_recommendations.csv
+carevalue-ml policy enforce reports/agent_recommendations.csv --outreach-budget 100
 carevalue-ml agents run reports/predictions.csv --output-path reports/agent_recommendations.csv
 carevalue-ml agents validate-contract reports/agent_handoff_contract.json
 carevalue-ml agents evaluate reports/agent_recommendations.csv reports/agent_recommendations_baseline.csv --budget 100
+```
+
+### Example insurer workflows
+
+```bash
+# Flow A: Risk + cost intelligence for actuarial review
+carevalue-ml models train-suite --suite maximal
+carevalue-ml models leaderboard reports/predictions.csv --model-name actuarial_suite --run-id r2026q1
+
+# Flow B: Capacity-constrained care operations
+carevalue-ml agents run reports/predictions.csv --run-id r2026q1 --contract-id DEMO
+carevalue-ml policy enforce reports/agent_recommendations.csv --outreach-budget 120
+
+# Flow C: Contract scenario planning
+carevalue-ml policy scenario reports/agent_recommendations.csv
+carevalue-ml agents evaluate reports/agent_recommendations.csv reports/agent_recommendations_baseline.csv --budget 120
 ```
 
 ## Databricks-optional deployment track

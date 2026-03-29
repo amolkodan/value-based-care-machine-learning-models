@@ -20,3 +20,5 @@ layers:
       - vbc_gold.agent_recommendations
       - vbc_gold.agent_audit_log
       - vbc_gold.agent_eval_metrics
+      - vbc_gold.policy_scenario_outputs
+      - vbc_gold.stage_contract_trace
