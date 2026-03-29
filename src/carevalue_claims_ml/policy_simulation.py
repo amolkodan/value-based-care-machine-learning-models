@@ -48,10 +48,15 @@ def evaluate_agent_strategy(
         - base_top.get("dual_status_proxy", pd.Series([0.0])).mean()
     )
     calibration_shift = float(agent_top["score"].mean() - base_top["score"].mean())
+    cost_delta = float(agent_top.get("expected_contract_delta", pd.Series([0.0])).sum() - base_top.get("expected_contract_delta", pd.Series([0.0])).sum())
+    outcome_delta = float(agent_top.get("uplift_score", agent_top["score"]).mean() - base_top.get("uplift_score", base_top["score"]).mean())
     return {
         "avoided_cost_delta": avoided_cost_agent - avoided_cost_base,
         "intervention_precision_delta": precision_agent - precision_base,
         "fairness_delta": fairness_delta,
         "budget_adherence": float(len(agent_top) / budget) if budget > 0 else 0.0,
         "calibration_shift": calibration_shift,
+        "cost_reduction_delta": cost_delta,
+        "outcome_improvement_delta": outcome_delta,
+        "cost_outcome_blended_delta": float(cost_delta * 0.6 + outcome_delta * 0.4),
     }

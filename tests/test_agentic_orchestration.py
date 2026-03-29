@@ -37,6 +37,8 @@ def test_pipeline_guardrails_and_audit(tmp_path: Path):
     assert audit_path.exists()
     assert "why_not" in audit.columns
     assert context.get("latest_quality") is not None
+    assert "provider_advisory_action" in recs.columns
+    assert "provider_advisory_rationale" in recs.columns
 
 
 def test_contract_build_validate_write(tmp_path: Path):

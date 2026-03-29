@@ -171,6 +171,30 @@ These examples show how payer analytics and value-based care operations teams ca
 - **Operational output**: Decision-support recommendations for coordinator review, not autonomous execution.
 - **Expected KPI impact**: Faster operational triage while preserving clinical governance controls.
 
+### 13) Value-based care cost reduction optimizer
+- **Business problem**: Prioritize members where interventions are most likely to reduce total cost of care under contract constraints.
+- **How this repo supports it**: `vbc_cost_optimizer` family and contract policy enforcement/scenario simulation.
+- **Operational output**: `reports/recommendations_policy_enforced.csv`, `reports/policy_scenarios.json`.
+- **Expected KPI impact**: Higher cost containment efficiency and improved shared-savings potential.
+
+### 14) Outcome improvement optimizer
+- **Business problem**: Improve outcomes while balancing cost by targeting members with greatest expected intervention benefit.
+- **How this repo supports it**: `outcome_improvement_optimizer` and blended cost-outcome policy metrics.
+- **Operational output**: recommendation set with outcome deltas and scenario-level tradeoff scores.
+- **Expected KPI impact**: Better quality proxy performance without uncontrolled spend growth.
+
+### 15) Claims behavior prediction from longitudinal claims
+- **Business problem**: Detect utilization behavior shifts early (e.g., rising avoidable ED/IP patterns).
+- **How this repo supports it**: `claims_behavior_predictor` and temporal claims behavior features.
+- **Operational output**: behavior-sensitive risk scores and trend-aware ranking outputs.
+- **Expected KPI impact**: Earlier interventions and reduced avoidable utilization.
+
+### 16) Provider advisory action model
+- **Business problem**: Translate member predictions into actionable provider guidance.
+- **How this repo supports it**: `provider_advisory_ranker` plus provider advisory fields in agentic outputs.
+- **Operational output**: provider advisory action + rationale fields in recommendation and audit outputs.
+- **Expected KPI impact**: Improved provider engagement and measurable actionability of predictive analytics.
+
 ### Use Case to Artifact Map
 
 - High-cost stratification -> `reports/leaderboard.csv`, model artifact metadata JSON
@@ -178,6 +202,10 @@ These examples show how payer analytics and value-based care operations teams ca
 - Audit and compliance review -> `reports/agent_audit.csv`, `reports/agent_handoff_contract.json`
 - Policy scenario planning -> `reports/policy_scenarios.json`
 - Contract-constrained recommendation output -> `reports/recommendations_policy_enforced.csv`
+- Cost reduction optimizer -> `models/*vbc_cost_optimizer*`, `reports/policy_scenarios.json`
+- Outcome improvement optimizer -> `models/*outcome_improvement_optimizer*`, `reports/agent_recommendations.csv`
+- Claims behavior predictor -> `models/*claims_behavior_predictor*`, `reports/leaderboard.csv`
+- Provider advisory actions -> `reports/agent_recommendations.csv`, `reports/agent_audit.csv`
 
 ## Agentic decision orchestration
 
@@ -234,6 +262,7 @@ carevalue-ml features build
 # Modeling workflows
 carevalue-ml models train
 carevalue-ml models train-suite --suite maximal
+carevalue-ml models train-use-cases
 carevalue-ml models evaluate reports/predictions.csv
 carevalue-ml models leaderboard reports/predictions.csv --model-name risk_v2 --run-id run_2026
 
@@ -260,6 +289,11 @@ carevalue-ml policy enforce reports/agent_recommendations.csv --outreach-budget 
 # Flow C: Contract scenario planning
 carevalue-ml policy scenario reports/agent_recommendations.csv
 carevalue-ml agents evaluate reports/agent_recommendations.csv reports/agent_recommendations_baseline.csv --budget 120
+
+# Flow D: Cost reduction + outcome improvement use-case pack
+carevalue-ml models train-use-cases
+carevalue-ml policy enforce reports/agent_recommendations.csv --outreach-budget 120
+carevalue-ml policy scenario reports/agent_recommendations.csv
 ```
 
 ## Databricks-optional deployment track

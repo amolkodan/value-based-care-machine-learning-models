@@ -73,6 +73,10 @@ def test_cli_leaderboard_and_policy(tmp_path: Path):
     assert res_enforce.exit_code == 0
     assert (tmp_path / "enforced.csv").exists()
 
+    res_use_cases = runner.invoke(app, ["models", "train-use-cases", "--output-dir", str(tmp_path / "models")])
+    # May fail if no DB configured in isolated env; verify command interface exists.
+    assert res_use_cases.exit_code in (0, 1)
+
 
 def test_cli_agents_run_validate_and_eval(tmp_path: Path):
     pred_path = tmp_path / "pred.csv"

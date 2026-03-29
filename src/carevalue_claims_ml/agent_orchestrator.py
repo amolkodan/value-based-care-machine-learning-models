@@ -85,6 +85,16 @@ def contract_impact_agent(recs: pd.DataFrame) -> pd.DataFrame:
     out["expected_contract_delta"] = 0.05 * out["score"].astype(float) * out["expected_cost"].astype(float)
     out["expected_pmpm_delta"] = out["expected_contract_delta"] / 12.0
     out["shared_savings_impact"] = 0.5 * out["expected_contract_delta"]
+    out["provider_advisory_action"] = out["recommended_action"].map(
+        {
+            "care_navigation_call": "prioritize_complex_care_plan",
+            "pharmacy_followup": "medication_review_outreach",
+            "digital_nudge": "digital_engagement_campaign",
+        }
+    ).fillna("manual_review_required")
+    out["provider_advisory_rationale"] = (
+        "Advisory derived from risk, uplift proxy, and contract impact expectations."
+    )
     return out
 
 

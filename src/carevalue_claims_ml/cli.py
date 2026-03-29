@@ -148,6 +148,26 @@ def models_train_suite(
     print(payload)
 
 
+@models_app.command("train-use-cases")
+def models_train_use_cases(
+    settings_path: Path = Path("config/settings.yaml"),
+    output_dir: Path = Path("models"),
+    database_url: str | None = None,
+):
+    settings = load_settings(settings_path)
+    engine = create_db_engine(get_database_url(database_url or settings.database_url))
+    features_df = build_member_month_features(engine, settings.feature_window_months)
+    labels_df = build_high_cost_label(engine, settings.label_horizon_months)
+    families = [
+        "vbc_cost_optimizer",
+        "outcome_improvement_optimizer",
+        "claims_behavior_predictor",
+        "provider_advisory_ranker",
+    ]
+    results = train_model_suite(features_df, labels_df, output_dir=output_dir, suite="maximal", model_families=families)
+    print({k: {"metrics": v.metrics, "artifact": str(v.artifact_path)} for k, v in results.items()})
+
+
 @models_app.command("score")
 def models_score(
     artifact: Path,

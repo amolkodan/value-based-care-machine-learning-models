@@ -14,8 +14,16 @@ model_families:
   - risk_trajectory_segment
   - uplift_stronger
   - contract_sensitive_ranker
+  - vbc_cost_optimizer
+  - outcome_improvement_optimizer
+  - claims_behavior_predictor
+  - provider_advisory_ranker
 model_params:
   contract_sensitive_ranker:
     contract_weight: 1.2
   anomaly_cost_spike:
     contamination: 0.1
+  vbc_cost_optimizer:
+    objective_weight: 1.0
+  outcome_improvement_optimizer:
+    objective_weight: 1.0

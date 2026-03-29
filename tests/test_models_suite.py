@@ -61,3 +61,16 @@ def test_train_model_suite_family_selection(tmp_path: Path):
     selected = ["risk_high_cost", "anomaly_cost_spike", "contract_sensitive_ranker"]
     results = train_model_suite(features, labels, tmp_path, suite="maximal", model_families=selected)
     assert set(results.keys()) == set(selected)
+
+
+def test_train_cost_outcome_use_case_families(tmp_path: Path):
+    features = _toy_features()
+    labels = _toy_labels(features)
+    selected = [
+        "vbc_cost_optimizer",
+        "outcome_improvement_optimizer",
+        "claims_behavior_predictor",
+        "provider_advisory_ranker",
+    ]
+    results = train_model_suite(features, labels, tmp_path, suite="maximal", model_families=selected)
+    assert set(results.keys()) == set(selected)

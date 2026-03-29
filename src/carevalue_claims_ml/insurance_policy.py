@@ -38,9 +38,14 @@ def run_policy_scenarios(recommendations: pd.DataFrame) -> dict[str, dict[str, f
     results: dict[str, dict[str, float]] = {}
     for name, cfg in scenarios.items():
         constrained = apply_contract_constraints(recommendations, cfg)
+        cost_component = float(constrained.get("expected_contract_delta", pd.Series([0.0])).sum())
+        outcome_component = float(constrained.get("uplift_score", constrained.get("score", pd.Series([0.0]))).sum())
         results[name] = {
             "approved": float((constrained["policy_status"] == "approved").sum()),
             "deferred_budget": float((constrained["policy_status"] == "deferred_budget").sum()),
             "projected_shared_savings": float(constrained["shared_savings_projection"].sum()),
+            "cost_reduction_score": cost_component,
+            "outcome_improvement_score": outcome_component,
+            "cost_outcome_tradeoff_index": float(cost_component * 0.6 + outcome_component * 0.4),
         }
     return results

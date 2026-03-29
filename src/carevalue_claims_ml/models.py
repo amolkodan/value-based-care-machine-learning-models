@@ -357,6 +357,61 @@ def train_contract_sensitive_ranker(
     return TrainingResult(run_id=run_id, model_name="contract_sensitive_ranker", metrics=metrics, artifact_path=artifact)
 
 
+def train_vbc_cost_optimizer(
+    features: pd.DataFrame, label_df: pd.DataFrame, output_dir: Path
+) -> TrainingResult:
+    # Cost optimizer focuses on high expected spend reduction opportunity.
+    result = train_contract_sensitive_ranker(features, label_df, output_dir)
+    return TrainingResult(
+        run_id=result.run_id,
+        model_name="vbc_cost_optimizer",
+        metrics={"cost_optimizer_objective": result.metrics.get("ranker_mae", 0.0)},
+        artifact_path=result.artifact_path,
+    )
+
+
+def train_outcome_improvement_optimizer(
+    features: pd.DataFrame, label_df: pd.DataFrame, output_dir: Path
+) -> TrainingResult:
+    # Outcome proxy optimizer leverages uplift strength for intervention impact.
+    result = train_uplift_stronger_model(features, label_df, output_dir)
+    return TrainingResult(
+        run_id=result.run_id,
+        model_name="outcome_improvement_optimizer",
+        metrics={
+            "outcome_uplift_mean": result.metrics.get("uplift_mean", 0.0),
+            "outcome_uplift_p90": result.metrics.get("uplift_p90", 0.0),
+        },
+        artifact_path=result.artifact_path,
+    )
+
+
+def train_claims_behavior_predictor(
+    features: pd.DataFrame, label_df: pd.DataFrame, output_dir: Path
+) -> TrainingResult:
+    # Claims behavior patterns are approximated through temporal risk trajectories.
+    result = train_temporal_risk_model(features, label_df, output_dir)
+    return TrainingResult(
+        run_id=result.run_id,
+        model_name="claims_behavior_predictor",
+        metrics=result.metrics,
+        artifact_path=result.artifact_path,
+    )
+
+
+def train_provider_advisory_ranker(
+    features: pd.DataFrame, label_df: pd.DataFrame, output_dir: Path
+) -> TrainingResult:
+    # Provider advisory ranker builds action ordering from contract-sensitive risk.
+    result = train_contract_sensitive_ranker(features, label_df, output_dir)
+    return TrainingResult(
+        run_id=result.run_id,
+        model_name="provider_advisory_ranker",
+        metrics=result.metrics,
+        artifact_path=result.artifact_path,
+    )
+
+
 def simulate_policy_allocation(
     member_scores: pd.DataFrame,
     budget: int,
@@ -397,6 +452,10 @@ def train_model_suite(
         "risk_trajectory_segment": train_risk_trajectory_segment_model,
         "uplift_stronger": train_uplift_stronger_model,
         "contract_sensitive_ranker": train_contract_sensitive_ranker,
+        "vbc_cost_optimizer": train_vbc_cost_optimizer,
+        "outcome_improvement_optimizer": train_outcome_improvement_optimizer,
+        "claims_behavior_predictor": train_claims_behavior_predictor,
+        "provider_advisory_ranker": train_provider_advisory_ranker,
     }
     if model_families:
         selected = model_families
