@@ -36,6 +36,8 @@ def generate_synthetic_dataset(output_dir: Path, config: SyntheticDataConfig) ->
     claims_line_path = output_dir / "claims_line.csv"
     diagnosis_path = output_dir / "diagnosis.csv"
     benchmarks_path = output_dir / "benchmarks.csv"
+    member_context_path = output_dir / "member_context.csv"
+    interventions_path = output_dir / "interventions.csv"
 
     providers = []
     for i in range(1, 31):
@@ -72,6 +74,26 @@ def generate_synthetic_dataset(output_dir: Path, config: SyntheticDataConfig) ->
         w.writerow(["member_id", "first_name", "last_name", "dob", "gender", "zip"])
         w.writerows(members)
 
+    with member_context_path.open("w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(
+            [
+                "member_id",
+                "sdoh_risk_index",
+                "adherence_proxy",
+                "digital_engagement_score",
+                "dual_status_proxy",
+                "chronic_burden_score",
+            ]
+        )
+        for member_id, *_ in members:
+            sdoh = round(random.uniform(0.0, 1.0), 3)
+            adherence = round(random.uniform(0.2, 0.98), 3)
+            engagement = round(random.uniform(0.0, 1.0), 3)
+            dual_proxy = int(random.random() < 0.2)
+            chronic_burden = round(1.0 + 4.0 * sdoh + random.uniform(0.0, 3.0), 3)
+            w.writerow([member_id, sdoh, adherence, engagement, dual_proxy, chronic_burden])
+
     months = [add_months(month_start(config.start_month), m) for m in range(config.months)]
     with eligibility_path.open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
@@ -91,8 +113,10 @@ def generate_synthetic_dataset(output_dir: Path, config: SyntheticDataConfig) ->
         base = 420.0
         trend = 1.006
         for idx, m in enumerate(months):
-            target = base * (trend**idx)
-            w.writerow([contract_id, m.isoformat(), f"{target:.2f}", f"{trend:.5f}", "0.50"])
+            # Introduce controlled temporal drift to stress-test models.
+            drift = 1.0 + (0.0015 if idx > (len(months) // 2) else 0.0)
+            target = base * (trend**idx) * drift
+            w.writerow([contract_id, m.isoformat(), f"{target:.2f}", f"{(trend * drift):.5f}", "0.50"])
 
     claim_rows = []
     line_rows = []
@@ -184,3 +208,18 @@ def generate_synthetic_dataset(output_dir: Path, config: SyntheticDataConfig) ->
         w = csv.writer(f)
         w.writerow(["diag_id", "claim_id", "icd10", "diag_position"])
         w.writerows(diag_rows)
+
+    with interventions_path.open("w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["member_id", "month", "care_management_touch", "intervention_type", "engagement_response"])
+        for member_id, *_ in members:
+            propensity = 0.12 + (0.16 if member_id in high_risk_members else 0.0)
+            for m in months:
+                touched = int(random.random() < propensity)
+                intervention_type = random.choice(["none", "outreach", "pharmacy", "care_navigation"])
+                if not touched:
+                    intervention_type = "none"
+                response = round(
+                    random.uniform(0.0, 1.0) * (1.2 if touched and intervention_type != "none" else 0.6), 3
+                )
+                w.writerow([member_id, m.isoformat(), touched, intervention_type, response])

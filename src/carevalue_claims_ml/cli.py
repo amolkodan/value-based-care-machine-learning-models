@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 from datetime import date
 from pathlib import Path
 
+import pandas as pd
 import typer
 from rich import print
 from sqlalchemy import text
@@ -13,9 +15,25 @@ from carevalue_claims_ml.config import load_settings
 from carevalue_claims_ml.data_generation import SyntheticDataConfig, generate_synthetic_dataset
 from carevalue_claims_ml.db import create_db_engine, get_database_url
 from carevalue_claims_ml.etl import build_member_months, initialize_schema
+from carevalue_claims_ml.evaluation import evaluate_predictions, write_leaderboard_artifacts
 from carevalue_claims_ml.features import build_high_cost_label, build_member_month_features
 from carevalue_claims_ml.loader import load_generated_folder
-from carevalue_claims_ml.models import load_model, score_model, train_cost_model, train_risk_model
+from carevalue_claims_ml.models import (
+    load_model,
+    score_model,
+    train_cost_model,
+    train_model_suite,
+    train_risk_model,
+)
+from carevalue_claims_ml.agent_orchestrator import (
+    build_handoff_contract,
+    generate_audit_log,
+    run_agentic_pipeline,
+    write_contract,
+)
+from carevalue_claims_ml.agent_contracts import AgentHandoffContract, validate_handoff_contract
+from carevalue_claims_ml.llm_optional import deterministic_postprocess, retrieve_reference_context
+from carevalue_claims_ml.policy_simulation import evaluate_agent_strategy, simulate_policy
 from carevalue_claims_ml.reporting import write_summary_report
 
 app = typer.Typer(add_completion=False)
@@ -24,12 +42,16 @@ data_app = typer.Typer(add_completion=False)
 features_app = typer.Typer(add_completion=False)
 models_app = typer.Typer(add_completion=False)
 report_app = typer.Typer(add_completion=False)
+policy_app = typer.Typer(add_completion=False)
+agents_app = typer.Typer(add_completion=False)
 
 app.add_typer(db_app, name="db")
 app.add_typer(data_app, name="data")
 app.add_typer(features_app, name="features")
 app.add_typer(models_app, name="models")
 app.add_typer(report_app, name="report")
+app.add_typer(policy_app, name="policy")
+app.add_typer(agents_app, name="agents")
 
 
 @app.callback()
@@ -98,6 +120,25 @@ def models_train(
     print({"risk_artifact": str(risk_result.artifact_path), "cost_artifact": str(cost_result.artifact_path)})
 
 
+@models_app.command("train-suite")
+def models_train_suite(
+    suite: str = "maximal",
+    settings_path: Path = Path("config/settings.yaml"),
+    output_dir: Path = Path("models"),
+    database_url: str | None = None,
+):
+    settings = load_settings(settings_path)
+    engine = create_db_engine(get_database_url(database_url or settings.database_url))
+    features_df = build_member_month_features(engine, settings.feature_window_months)
+    labels_df = build_high_cost_label(engine, settings.label_horizon_months)
+    results = train_model_suite(features_df, labels_df, output_dir=output_dir, suite=suite)
+    payload = {
+        name: {"metrics": res.metrics, "artifact": str(res.artifact_path), "run_id": res.run_id}
+        for name, res in results.items()
+    }
+    print(payload)
+
+
 @models_app.command("score")
 def models_score(
     artifact: Path,
@@ -137,6 +178,34 @@ def models_score(
     print(f"Scored {len(scored)} rows into vbc.model_scores")
 
 
+@models_app.command("evaluate")
+def models_evaluate(
+    predictions: Path,
+    output_path: Path = Path("reports/evaluation.json"),
+):
+    df = pd.read_csv(predictions)
+    result = evaluate_predictions(df)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps({"metrics": result.metrics, "subgroup_metrics": result.subgroup_metrics}, indent=2),
+        encoding="utf-8",
+    )
+    print({"evaluation": str(output_path), "metrics": result.metrics})
+
+
+@models_app.command("leaderboard")
+def models_leaderboard(
+    predictions: Path,
+    model_name: str = "adhoc_model",
+    run_id: str = "manual",
+    output_dir: Path = Path("reports"),
+):
+    df = pd.read_csv(predictions)
+    result = evaluate_predictions(df)
+    leaderboard_path, model_card_path = write_leaderboard_artifacts(output_dir, model_name, run_id, result)
+    print({"leaderboard": str(leaderboard_path), "model_card": str(model_card_path)})
+
+
 @report_app.command("summary")
 def report_summary(
     settings_path: Path = Path("config/settings.yaml"),
@@ -149,3 +218,86 @@ def report_summary(
     savings_df = score_shared_savings(engine, settings.contract_id)
     out_path = write_summary_report(output_dir, pmpm_df, savings_df)
     print(f"Wrote {out_path}")
+
+
+@policy_app.command("simulate")
+def policy_simulate(
+    scores_path: Path,
+    budget: int = 100,
+    output_path: Path = Path("reports/policy_simulation.json"),
+):
+    scores = pd.read_csv(scores_path)
+    metrics = simulate_policy(scores, budget=budget)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
+    print({"policy_metrics": metrics, "output": str(output_path)})
+
+
+@agents_app.command("run")
+def agents_run(
+    scores_path: Path,
+    output_path: Path = Path("reports/agent_recommendations.csv"),
+    audit_path: Path = Path("reports/agent_audit.csv"),
+    contract_path: Path = Path("reports/agent_handoff_contract.json"),
+):
+    scored = pd.read_csv(scores_path)
+    recs = run_agentic_pipeline(scored)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    recs.to_csv(output_path, index=False)
+    audit = generate_audit_log(recs, {"alerts": "none"}, audit_path)
+    contract = build_handoff_contract("agents_run_output", recs)
+    write_contract(contract, contract_path)
+    print(
+        {
+            "recommendations": str(output_path),
+            "audit": str(audit_path),
+            "contract": str(contract_path),
+            "rows": len(recs),
+            "audit_rows": len(audit),
+        }
+    )
+
+
+@agents_app.command("validate-contract")
+def agents_validate_contract(contract_path: Path):
+    payload = json.loads(contract_path.read_text(encoding="utf-8"))
+    contract = AgentHandoffContract(
+        stage=str(payload["stage"]),
+        payload=list(payload["payload"]),
+        version=str(payload["version"]),
+    )
+    validate_handoff_contract(contract)
+    print({"contract": str(contract_path), "valid": True})
+
+
+@agents_app.command("evaluate")
+def agents_evaluate(
+    agent_output_path: Path,
+    baseline_output_path: Path,
+    budget: int = 100,
+    output_path: Path = Path("reports/agent_eval.json"),
+):
+    agent_df = pd.read_csv(agent_output_path)
+    baseline_df = pd.read_csv(baseline_output_path)
+    metrics = evaluate_agent_strategy(agent_df, baseline_df, budget=budget)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
+    print({"agent_eval": str(output_path), "metrics": metrics})
+
+
+@agents_app.command("llm-draft")
+def agents_llm_draft(
+    member_payload_path: Path,
+    model_cards_path: Path = Path("MODEL_CARDS.md"),
+    output_path: Path = Path("reports/llm_optional_draft.json"),
+):
+    member_payload = json.loads(member_payload_path.read_text(encoding="utf-8"))
+    context = retrieve_reference_context(
+        model_cards_path=model_cards_path,
+        benchmark_summary="Benchmark trend and PMPM context",
+        contract_rules="Recommendation-only policy; no autonomous clinical action",
+    )
+    drafted = deterministic_postprocess(context + json.dumps(member_payload))
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(drafted, indent=2), encoding="utf-8")
+    print({"llm_optional_draft": str(output_path)})

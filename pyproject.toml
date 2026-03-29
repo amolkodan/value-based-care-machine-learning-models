@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "carevalue-claims-ml"
 version = "0.1.0"
-description = "ML and analytics pipelines for value based care using a medical claims backbone"
+description = "Open-source cloud-agnostic value-based care ML platform with specialized claims models, evaluation, and policy simulation"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

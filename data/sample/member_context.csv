@@ -1,0 +1,4 @@
+member_id,sdoh_risk_index,adherence_proxy,digital_engagement_score,dual_status_proxy,chronic_burden_score
+M000001,0.842,0.411,0.523,1,6.104
+M000002,0.214,0.903,0.741,0,2.188
+M000003,0.576,0.662,0.287,1,4.393

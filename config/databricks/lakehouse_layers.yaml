@@ -1,0 +1,22 @@
+layers:
+  bronze:
+    description: "Raw source-aligned datasets with minimal transformation"
+    tables:
+      - vbc_bronze.claims_header_raw
+      - vbc_bronze.claims_line_raw
+      - vbc_bronze.eligibility_raw
+  silver:
+    description: "Conformed normalized healthcare tables"
+    tables:
+      - vbc_silver.member_months
+      - vbc_silver.attribution
+      - vbc_silver.features
+  gold:
+    description: "Analytics-ready and model output datasets"
+    tables:
+      - vbc_gold.model_scores
+      - vbc_gold.leaderboard
+      - vbc_gold.contract_performance
+      - vbc_gold.agent_recommendations
+      - vbc_gold.agent_audit_log
+      - vbc_gold.agent_eval_metrics

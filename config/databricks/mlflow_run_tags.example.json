@@ -1,0 +1,12 @@
+{
+  "project": "carevalue-claims-ml",
+  "platform_mode": "cloud-agnostic",
+  "model_family": "risk_cost_uplift_temporal",
+  "data_layer": "gold",
+  "lineage_source": "member_month_features_v1",
+  "compliance": "synthetic_or_deidentified_only",
+  "agent_policy_name": "recommendation_only_v1",
+  "guardrail_profile": "safety_default",
+  "contract_version": "v1",
+  "agent_eval_window": "retrospective_12m"
+}
