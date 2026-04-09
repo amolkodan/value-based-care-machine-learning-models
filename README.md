@@ -4,14 +4,6 @@
 
 The platform targets payer actuarial and VBC operations teams, health system analytics, and care-management programs that require member-month feature stores, multi-model prediction (risk, cost, temporal behavior, uplift proxies), **episode-level financial and clinical-density scoring**, policy simulation, and agentic recommendation orchestration with audit trails.
 
-## Why this platform is differentiated
-
-- **Contract-native analytics**: member-level predictions are linked to PMPM and shared-savings impact framing.
-- **Modern model portfolio**: calibrated risk, interval cost forecasting, temporal validation, uplift proxy, and policy simulation.
-- **Agentic orchestration**: specialized healthcare agents with recommendation-only guardrails, deterministic handoff contracts, and audit trails.
-- **Cloud-agnostic by design**: local-first execution with optional Databricks-compatible templates for lakehouse and MLflow operations.
-- **Governance-first artifacts**: model metadata sidecars, leaderboard generation, subgroup fairness slicing, and security boundaries.
-
 ## Healthcare claims ontology and glossary
 
 - **Eligibility month**: covered member period used as denominator for PMPM analytics.

@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-04-09
+
+### Changed
+
+- Trim PyPI/GitHub README: remove the “Why this platform is differentiated” bullet list so the project description is shorter on [pypi.org](https://pypi.org/project/carevalue-claims-ml/).
+
+[0.2.1]: https://github.com/amolkodan/value-based-care-machine-learning-models/releases/tag/v0.2.1
+
 ## [0.2.0] - 2026-04-09
 
 ### Added

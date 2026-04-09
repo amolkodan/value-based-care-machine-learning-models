@@ -2,6 +2,8 @@
 
 This repository ships **one** distribution on PyPI named **`carevalue-claims-ml`**. It includes the umbrella **VBC Intelligence OS** import namespaces (`vbc_intel_*`) and the existing `carevalue_claims_ml` package. Separate PyPI projects per sublibrary are optional and not required for users to `pip install` once.
 
+**Project description on PyPI** comes from `readme = "README.md"` in `pyproject.toml`. To change what appears on [the PyPI project page](https://pypi.org/project/carevalue-claims-ml/), edit `README.md`, bump the version, and publish a new release (PyPI does not let you edit the long description in the web UI).
+
 ## Prerequisites
 
 1. A [PyPI](https://pypi.org/account/register/) account (and optionally [TestPyPI](https://test.pypi.org/account/register/) for a dry run).
