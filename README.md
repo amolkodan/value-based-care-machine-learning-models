@@ -1,8 +1,8 @@
 # Open Sourced Value Based Care ML Models
 
-`Open Sourced Value Based Care ML Models` is an open-source, cloud-agnostic healthtech intelligence stack for value-based care (VBC) organizations that need clinically interpretable, contract-aware, and governance-ready machine learning over longitudinal claims data.
+**VBC Intelligence OS** (distributed as `carevalue-claims-ml`) is an open-source, cloud-agnostic analytics and machine learning stack for organizations that operate under value-based payment, bundled episodes, and population health contracts. It is built for clinically interpretable signals derived from **longitudinal medical, institutional, and pharmacy claims**, unified into a coherent **patient journey** view for risk, cost, utilization pattern detection, and governance-ready model artifacts.
 
-The platform is designed for payer and provider analytics teams operating PMPM and shared-savings contracts, with extensible workflows for member-month feature stores, multi-model risk and cost prediction, intervention prioritization, policy simulation, and agentic recommendation orchestration.
+The platform targets payer actuarial and VBC operations teams, health system analytics, and care-management programs that require member-month feature stores, multi-model prediction (risk, cost, temporal behavior, uplift proxies), **episode-level financial and clinical-density scoring**, policy simulation, and agentic recommendation orchestration with audit trails.
 
 ## Why this platform is differentiated
 
@@ -22,13 +22,37 @@ The platform is designed for payer and provider analytics teams operating PMPM a
 - **Attribution**: assignment of member responsibility to clinician group.
 - **Risk stratification**: prospective identification of high-cost/high-need cohorts.
 - **Care gap intervention**: operational outreach action (navigation, pharmacy follow-up, digital nudge).
+- **Episode of care / bundled episode**: a time-bounded cluster of services (often anchored on an anchor procedure or admission) used for **episode-based payment** (e.g., BPCI, commercial bundles, specialty surgical episodes).
+- **CPT / HCPCS**: procedure and supply codes on professional and outpatient claims; used for **procedural intensity** and bundle eligibility.
+- **NDC**: National Drug Code on **pharmacy claims**; distinct NDC counts support **polypharmacy** and **medication therapy complexity** proxies.
+- **Place of service (POS)**: setting of care on claim lines; supports site-of-care and **avoidable acute** utilization patterning when combined with diagnosis context.
+- **Revenue codes**: institutional claim-line revenue centers; useful for **inpatient vs ancillary** intensity within an admission episode.
+- **HCC-adjacent signals**: ICD-10-driven **comorbidity breadth** is a structural input to risk-adjustment-style analytics (this repository does not compute CMS-HCC coefficients; it exposes **condition count and trajectory** features for modeling).
+- **Care fragmentation**: patterns of many small encounters or cross-modality spikes; member-month velocity features help ML detect **acceleration** in utilization.
+
+## Integrated patient journey, patterns, and predictive signals
+
+The ML pipeline is designed to **discover patterns** across modalities and time:
+
+- **Claims + diagnosis + pharmacy**: merge professional/institutional lines with pharmacy fills (`journey merge`, `merge_medical_and_pharmacy_claims`) so models see **one longitudinal timeline** per member.
+- **Utilization velocity**: member-month claim volume and allowed spend (`journey monthly-features`, `monthly_utilization_features`) surface **trend breaks**, seasonality, and post-acute ramps.
+- **Pharmacy signals**: distinct NDC counts per member (`distinct_ndc_count_by_member`) support **polypharmacy risk** and MTM-style prioritization features.
+- **Clinical and procedural density**: distinct ICD-10 and CPT/HCPCS counts (`diagnosis_morbidity_breadth_by_member`, `procedure_intensity_by_member`) enrich **episode scoring** and risk models.
+- **Bundled episodes**: gap-based episode construction and scoring (`episodes build` / `score`) produce **episode allowed**, span, **financial intensity**, optional **ICD/CPT breadth**, and **within-cohort severity percentiles** for contract and CMMI-style analytics.
+
+These features feed the existing **model suite** (risk, cost, temporal, uplift, anomaly, ranking) so teams can predict **high-cost probability**, **expected spend bands**, **behavior shifts**, and **intervention ROI proxies** while preserving subgroup fairness and model-card documentation.
 
 ## End-to-end architecture
 
 ```mermaid
 flowchart LR
-claimsRaw[ClaimsAndEligibilityRaw] --> memberMonth[MemberMonthETL]
+claimsRaw[MedicalAndInstitutionalClaims] --> journeyMerge[JourneyUnification]
+pharmacyRaw[PharmacyClaims] --> journeyMerge
+diagRaw[DiagnosisLines] --> memberMonth[MemberMonthETL]
+journeyMerge --> episodeBuild[BundledEpisodeBuilder]
+journeyMerge --> memberMonth
 memberMonth --> featureStore[FeatureAndLabelBuilder]
+episodeBuild --> featureStore
 featureStore --> modelSuite[RiskCostTemporalUpliftModels]
 modelSuite --> evalHub[EvaluationFairnessLeaderboard]
 modelSuite --> policySim[PolicySimulation]
@@ -273,6 +297,13 @@ carevalue-ml policy enforce reports/agent_recommendations.csv --outreach-budget 
 carevalue-ml agents run reports/predictions.csv --output-path reports/agent_recommendations.csv
 carevalue-ml agents validate-contract reports/agent_handoff_contract.json
 carevalue-ml agents evaluate reports/agent_recommendations.csv reports/agent_recommendations_baseline.csv --budget 100
+
+# Patient journey and episode analytics (unify medical + optional pharmacy, then engineer features)
+carevalue-ml journey merge data/sample/claims_header.csv reports/journey_unified.csv
+# With pharmacy file: add --pharmacy-path your_rx_claims.csv (same member_id, service_date, allowed_amount columns)
+carevalue-ml journey monthly-features reports/journey_unified.csv
+carevalue-ml episodes build reports/journey_unified.csv --archetype orthopedic --output-path reports/episodes.csv
+carevalue-ml episodes score reports/episodes.csv --diagnosis-code-col diagnosis_code --procedure-code-col procedure_code
 ```
 
 ### Example insurer workflows
@@ -421,8 +452,12 @@ The repository now includes a branded umbrella with additive sublibrary namespac
 
 ### Quick import examples
 ```python
-from vbc_intel_core import train_model_suite
-from vbc_intel_episodes import build_bundled_episodes, score_episode_risk
+from vbc_intel_core import (
+    merge_medical_and_pharmacy_claims,
+    monthly_utilization_features,
+    train_model_suite,
+)
+from vbc_intel_episodes import EPISODE_ARCHETYPES, build_bundled_episodes, score_episode_risk
 from vbc_intel_policy import run_policy_scenarios, simulate_policy
 from vbc_intel_benchmarks import calculate_pmpm
 from vbc_intel_careops import run_agentic_pipeline
@@ -432,6 +467,7 @@ from vbc_intel_careops import run_agentic_pipeline
 ```bash
 carevalue-ml libraries
 carevalue-ml episodes --help
+carevalue-ml journey --help
 carevalue-ml benchmarks --help
 carevalue-ml careops --help
 ```

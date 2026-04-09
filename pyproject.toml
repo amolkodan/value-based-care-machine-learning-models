@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "carevalue-claims-ml"
-version = "0.1.0"
-description = "Open-source cloud-agnostic value-based care ML platform with specialized claims models, evaluation, and policy simulation"
+version = "0.2.0"
+description = "VBC Intelligence OS: longitudinal claims, pharmacy, and diagnosis analytics for bundled episodes, patient-journey patterns, and contract-aware ML"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -18,6 +18,9 @@ keywords = [
   "machine-learning",
   "claims-analytics",
   "bundled-payments",
+  "episode-of-care",
+  "patient-journey",
+  "pharmacy-benefits",
   "risk-modeling"
 ]
 classifiers = [

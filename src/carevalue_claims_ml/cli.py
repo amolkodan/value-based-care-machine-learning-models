@@ -18,6 +18,10 @@ from carevalue_claims_ml.etl import build_member_months, initialize_schema
 from carevalue_claims_ml.evaluation import evaluate_predictions, write_leaderboard_artifacts
 from carevalue_claims_ml.episodes import build_bundled_episodes, score_episode_risk
 from carevalue_claims_ml.features import build_high_cost_label, build_member_month_features
+from carevalue_claims_ml.journey_signals import (
+    merge_medical_and_pharmacy_claims,
+    monthly_utilization_features,
+)
 from carevalue_claims_ml.loader import load_generated_folder
 from carevalue_claims_ml.models import (
     load_model,
@@ -49,6 +53,7 @@ agents_app = typer.Typer(add_completion=False)
 episodes_app = typer.Typer(add_completion=False)
 benchmarks_app = typer.Typer(add_completion=False)
 careops_app = typer.Typer(add_completion=False)
+journey_app = typer.Typer(add_completion=False)
 
 app.add_typer(db_app, name="db")
 app.add_typer(data_app, name="data")
@@ -60,6 +65,7 @@ app.add_typer(agents_app, name="agents")
 app.add_typer(episodes_app, name="episodes")
 app.add_typer(benchmarks_app, name="benchmarks")
 app.add_typer(careops_app, name="careops")
+app.add_typer(journey_app, name="journey")
 
 
 @app.callback()
@@ -290,12 +296,44 @@ def episodes_build(
 def episodes_score(
     episodes_path: Path,
     output_path: Path = Path("reports/episode_scores.csv"),
+    diagnosis_code_col: str | None = None,
+    procedure_code_col: str | None = None,
 ):
     episodes_df = pd.read_csv(episodes_path)
-    scored = score_episode_risk(episodes_df)
+    scored = score_episode_risk(
+        episodes_df,
+        diagnosis_code_col=diagnosis_code_col,
+        procedure_code_col=procedure_code_col,
+    )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     scored.to_csv(output_path, index=False)
     print({"episode_scores": str(output_path), "rows": len(scored)})
+
+
+@journey_app.command("merge")
+def journey_merge(
+    medical_path: Path,
+    output_path: Path = Path("reports/journey_unified.csv"),
+    pharmacy_path: Path | None = None,
+):
+    medical = pd.read_csv(medical_path)
+    pharmacy = pd.read_csv(pharmacy_path) if pharmacy_path is not None else None
+    unified = merge_medical_and_pharmacy_claims(medical, pharmacy)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    unified.to_csv(output_path, index=False)
+    print({"journey_unified": str(output_path), "rows": len(unified)})
+
+
+@journey_app.command("monthly-features")
+def journey_monthly_features(
+    claims_path: Path,
+    output_path: Path = Path("reports/journey_member_month_utilization.csv"),
+):
+    claims = pd.read_csv(claims_path)
+    features = monthly_utilization_features(claims)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    features.to_csv(output_path, index=False)
+    print({"monthly_utilization": str(output_path), "rows": len(features)})
 
 
 @policy_app.command("simulate")

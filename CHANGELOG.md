@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-04-09
+
+### Added
+
+- `carevalue_claims_ml.journey_signals`: merge professional/institutional and pharmacy claim lines, member-month utilization features, NDC polypharmacy proxy, CPT/HCPCS intensity, ICD-10 morbidity breadth.
+- Episode archetypes (`general`, `orthopedic`, `cardiac`, `maternity`, `oncology`) and richer `score_episode_risk` (clinical/procedural breadth, financial intensity, severity percentile).
+- CLI: `journey merge`, `journey monthly-features`; `episodes score` accepts optional diagnosis/procedure columns.
+- `vbc_intel_core` re-exports journey helpers; `vbc_intel_episodes` exports `EPISODE_ARCHETYPES`.
+
+### Changed
+
+- Package description and keywords emphasize bundled episodes, patient journey, and pharmacy integration.
+
+[0.2.0]: https://github.com/amolkodan/value-based-care-machine-learning-models/releases/tag/v0.2.0
+
 ## [0.1.0] - 2026-04-09
 
 ### Added

@@ -1,4 +1,4 @@
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "agent_contracts",
@@ -12,6 +12,7 @@ __all__ = [
     "memory_store",
     "models",
     "episodes",
+    "journey_signals",
     "insurance_policy",
     "policy_simulation",
     "reporting",
