@@ -32,9 +32,9 @@ TrainerFn = Callable[[pd.DataFrame, pd.DataFrame, Path], TrainingResult]
 
 
 def generate_run_id() -> str:
-    import datetime
+    from datetime import datetime, timezone
 
-    return datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
 
 def _feature_hash(columns: list[str]) -> str:

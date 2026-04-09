@@ -325,3 +325,119 @@ The runtime remains vendor-neutral. Optional templates in `config/databricks` pr
 ## License
 
 MIT
+
+## Proposed Multi-PyPI Expansion (Additive Roadmap)
+
+This repository can publish multiple focused Python libraries while keeping the same codebase and preserving backward compatibility.
+
+### 1) `carevalue-core-ml`
+- **What it does**: trains and scores risk, cost, temporal, and uplift models on member-month features.
+- **Who uses it**: payer/provider data science teams and analytics engineering teams.
+- **Why it helps adoption**: creates a clean entry point for organizations that only need core ML without policy or agent complexity.
+
+### 2) `carevalue-episodes`
+- **What it does**: builds bundled episodes from claims and predicts episode-level cost, quality risk, and variance.
+- **Who uses it**: bundled-payment programs, contracting teams, actuarial analysts.
+- **Why it helps adoption**: supports one of the fastest-growing VBC payment motions with episode-native ML workflows.
+
+### 3) `carevalue-policy-sim`
+- **What it does**: simulates shared-savings, downside-risk, and bundled-payment outcomes from model outputs.
+- **Who uses it**: finance strategy teams, value transformation leaders, contracting operations.
+- **Why it helps adoption**: translates model scores into contract-ready decisions and financial planning scenarios.
+
+### 4) `carevalue-benchmarks`
+- **What it does**: ships national-interest benchmark packs with synthetic population archetypes and standardized KPI reports.
+- **Who uses it**: public-sector pilots, researchers, implementation partners, health plans evaluating tools.
+- **Why it helps adoption**: enables apples-to-apples evaluation and easier procurement/comparison conversations.
+
+### 5) `carevalue-agentic-care`
+- **What it does**: orchestrates explainable triage and intervention recommendations with governance guardrails and audit logs.
+- **Who uses it**: care management operations and platform engineering teams.
+- **Why it helps adoption**: provides implementation-ready, human-in-the-loop operational pathways.
+
+## National Interest Features To Add (No Deletions Required)
+
+- **State and region benchmark profiles**: evaluate performance under regional utilization and demographic shifts.
+- **Equity stress-test suite**: subgroup drift, calibration disparity checks, and fairness regression alerts.
+- **Public reporting bundle**: reproducibility manifest + model card + governance summary in one export.
+- **Episode archetype starter packs**: orthopedic, cardiac, maternity, oncology baseline episode definitions.
+- **Rural and safety-net scenario profiles**: robust simulations for under-resourced care settings.
+- **Policy KPI mapper**: maps predictions to metrics relevant for ACO-style and bundled program governance.
+
+## How People Will Use These Libraries
+
+### Typical workflow
+1. Install `carevalue-core-ml` and train baseline/advanced models.
+2. Add `carevalue-episodes` for bundled episode construction and forecasting.
+3. Add `carevalue-policy-sim` to run budget and contract scenarios.
+4. Add `carevalue-benchmarks` to compare against national synthetic archetypes.
+5. Add `carevalue-agentic-care` for operational triage recommendations and auditable handoffs.
+
+### Minimal install examples
+```bash
+pip install carevalue-core-ml
+pip install carevalue-episodes
+pip install carevalue-policy-sim
+pip install carevalue-benchmarks
+pip install carevalue-agentic-care
+```
+
+### Example usage shape (target API direction)
+```python
+from carevalue_core_ml import train_suite, score_population
+from carevalue_episodes import build_episodes, score_episodes
+from carevalue_policy_sim import run_contract_scenarios
+
+models = train_suite(claims_df, eligibility_df, suite="maximal")
+member_scores = score_population(models, member_month_df)
+episodes = build_episodes(claims_df, archetype="orthopedic")
+episode_scores = score_episodes(episodes)
+scenario_report = run_contract_scenarios(member_scores, episode_scores, profile="bundled_base")
+```
+
+## First MVP Packaging Sequence
+
+To move toward publication safely and additively:
+
+1. Extend `pyproject.toml` metadata and extras for package boundaries.
+2. Stabilize public exports in `src/carevalue_claims_ml/__init__.py`.
+3. Add grouped CLI commands in `src/carevalue_claims_ml/cli.py` for core/episodes/policy/benchmarks/agents.
+4. Publish multi-package usage docs in this `README.md`.
+5. Add release-grade checks in `.github/workflows/ci.yml` for build, wheel validation, and smoke tests.
+
+## VBC Intelligence OS Namespace (Implemented Scaffold)
+
+The repository now includes a branded umbrella with additive sublibrary namespaces while preserving existing imports and CLI behavior.
+
+### Umbrella
+- **VBC Intelligence OS**
+
+### Sublibrary import namespaces
+- `vbc_intel_core`
+- `vbc_intel_episodes`
+- `vbc_intel_policy`
+- `vbc_intel_benchmarks`
+- `vbc_intel_careops`
+
+### Quick import examples
+```python
+from vbc_intel_core import train_model_suite
+from vbc_intel_episodes import build_bundled_episodes, score_episode_risk
+from vbc_intel_policy import run_policy_scenarios, simulate_policy
+from vbc_intel_benchmarks import calculate_pmpm
+from vbc_intel_careops import run_agentic_pipeline
+```
+
+### CLI discovery
+```bash
+carevalue-ml libraries
+carevalue-ml episodes --help
+carevalue-ml benchmarks --help
+carevalue-ml careops --help
+```
+
+## Publish to PyPI
+
+Step-by-step instructions (Trusted Publishing, manual `twine`, versioning): see [`PUBLISHING.md`](PUBLISHING.md).
+
+After release: `pip install carevalue-claims-ml`

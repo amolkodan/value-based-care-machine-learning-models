@@ -8,6 +8,29 @@ version = "0.1.0"
 description = "Open-source cloud-agnostic value-based care ML platform with specialized claims models, evaluation, and policy simulation"
 readme = "README.md"
 requires-python = ">=3.10"
+license = "MIT"
+authors = [
+  {name = "VBC Intelligence OS Contributors"}
+]
+keywords = [
+  "healthcare",
+  "value-based-care",
+  "machine-learning",
+  "claims-analytics",
+  "bundled-payments",
+  "risk-modeling"
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Healthcare Industry",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Scientific/Engineering :: Medical Science Apps."
+]
 dependencies = [
   "pandas>=2.0",
   "numpy>=1.24",
@@ -24,11 +47,42 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "pytest>=7.4",
-  "ruff>=0.1.7"
+  "ruff>=0.1.7",
+  "build>=1.0",
+  "twine>=5.0"
 ]
+core = []
+episodes = []
+policy = []
+benchmarks = []
+careops = []
+
+[project.urls]
+Homepage = "https://github.com/amolkodan/value-based-care-machine-learning-models"
+Documentation = "https://github.com/amolkodan/value-based-care-machine-learning-models#readme"
+Repository = "https://github.com/amolkodan/value-based-care-machine-learning-models"
+Issues = "https://github.com/amolkodan/value-based-care-machine-learning-models/issues"
+Changelog = "https://github.com/amolkodan/value-based-care-machine-learning-models/blob/main/CHANGELOG.md"
 
 [project.scripts]
 carevalue-ml = "carevalue_claims_ml.cli:app"
+vbc-intel = "carevalue_claims_ml.cli:app"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+license-files = ["LICENSE"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = [
+  "carevalue_claims_ml*",
+  "vbc_intel_core*",
+  "vbc_intel_episodes*",
+  "vbc_intel_policy*",
+  "vbc_intel_benchmarks*",
+  "vbc_intel_careops*"
+]
 
 [tool.ruff]
 line-length = 100

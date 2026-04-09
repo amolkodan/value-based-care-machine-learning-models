@@ -16,6 +16,7 @@ from carevalue_claims_ml.data_generation import SyntheticDataConfig, generate_sy
 from carevalue_claims_ml.db import create_db_engine, get_database_url
 from carevalue_claims_ml.etl import build_member_months, initialize_schema
 from carevalue_claims_ml.evaluation import evaluate_predictions, write_leaderboard_artifacts
+from carevalue_claims_ml.episodes import build_bundled_episodes, score_episode_risk
 from carevalue_claims_ml.features import build_high_cost_label, build_member_month_features
 from carevalue_claims_ml.loader import load_generated_folder
 from carevalue_claims_ml.models import (
@@ -45,6 +46,9 @@ models_app = typer.Typer(add_completion=False)
 report_app = typer.Typer(add_completion=False)
 policy_app = typer.Typer(add_completion=False)
 agents_app = typer.Typer(add_completion=False)
+episodes_app = typer.Typer(add_completion=False)
+benchmarks_app = typer.Typer(add_completion=False)
+careops_app = typer.Typer(add_completion=False)
 
 app.add_typer(db_app, name="db")
 app.add_typer(data_app, name="data")
@@ -53,11 +57,30 @@ app.add_typer(models_app, name="models")
 app.add_typer(report_app, name="report")
 app.add_typer(policy_app, name="policy")
 app.add_typer(agents_app, name="agents")
+app.add_typer(episodes_app, name="episodes")
+app.add_typer(benchmarks_app, name="benchmarks")
+app.add_typer(careops_app, name="careops")
 
 
 @app.callback()
 def main():
     pass
+
+
+@app.command("libraries")
+def libraries():
+    print(
+        {
+            "umbrella": "VBC Intelligence OS",
+            "sublibraries": [
+                "vbc_intel_core",
+                "vbc_intel_episodes",
+                "vbc_intel_policy",
+                "vbc_intel_benchmarks",
+                "vbc_intel_careops",
+            ],
+        }
+    )
 
 
 @db_app.command("init")
@@ -249,6 +272,32 @@ def report_summary(
     print(f"Wrote {out_path}")
 
 
+@episodes_app.command("build")
+def episodes_build(
+    claims_path: Path,
+    output_path: Path = Path("reports/episodes.csv"),
+    archetype: str = "general",
+    window_days: int = 90,
+):
+    claims = pd.read_csv(claims_path)
+    episodes = build_bundled_episodes(claims, archetype=archetype, window_days=window_days)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    episodes.to_csv(output_path, index=False)
+    print({"episodes": str(output_path), "rows": len(episodes), "archetype": archetype})
+
+
+@episodes_app.command("score")
+def episodes_score(
+    episodes_path: Path,
+    output_path: Path = Path("reports/episode_scores.csv"),
+):
+    episodes_df = pd.read_csv(episodes_path)
+    scored = score_episode_risk(episodes_df)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    scored.to_csv(output_path, index=False)
+    print({"episode_scores": str(output_path), "rows": len(scored)})
+
+
 @policy_app.command("simulate")
 def policy_simulate(
     scores_path: Path,
@@ -260,6 +309,20 @@ def policy_simulate(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
     print({"policy_metrics": metrics, "output": str(output_path)})
+
+
+@benchmarks_app.command("pmpm")
+def benchmarks_pmpm(
+    settings_path: Path = Path("config/settings.yaml"),
+    output_path: Path = Path("reports/benchmark_pmpm.csv"),
+    database_url: str | None = None,
+):
+    settings = load_settings(settings_path)
+    engine = create_db_engine(get_database_url(database_url or settings.database_url))
+    pmpm_df = calculate_pmpm(engine)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    pmpm_df.to_csv(output_path, index=False)
+    print({"benchmark_pmpm": str(output_path), "rows": len(pmpm_df)})
 
 
 @policy_app.command("scenario")
@@ -328,6 +391,25 @@ def agents_run(
             "rows": len(recs),
             "audit_rows": len(audit),
         }
+    )
+
+
+@careops_app.command("run")
+def careops_run(
+    scores_path: Path,
+    output_path: Path = Path("reports/agent_recommendations.csv"),
+    audit_path: Path = Path("reports/agent_audit.csv"),
+    contract_path: Path = Path("reports/agent_handoff_contract.json"),
+    run_id: str = "manual",
+    contract_id: str = "DEMO",
+):
+    agents_run(
+        scores_path=scores_path,
+        output_path=output_path,
+        audit_path=audit_path,
+        contract_path=contract_path,
+        run_id=run_id,
+        contract_id=contract_id,
     )
 
 
