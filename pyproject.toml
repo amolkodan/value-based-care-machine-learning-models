@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "carevalue-claims-ml"
-version = "0.2.1"
+version = "0.2.2"
 description = "VBC Intelligence OS: longitudinal claims, pharmacy, and diagnosis analytics for bundled episodes, patient-journey patterns, and contract-aware ML"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 authors = [
-  {name = "VBC Intelligence OS Contributors"}
+  {name = "Amol Kodan"}
 ]
 keywords = [
   "healthcare",
