@@ -349,7 +349,7 @@ The runtime remains vendor-neutral. Optional templates in `config/databricks` pr
 
 MIT
 
-## Proposed Multi-PyPI Expansion (Additive Roadmap)
+## Multi-PyPI Expansion (Additive Roadmap)
 
 This repository can publish multiple focused Python libraries while keeping the same codebase and preserving backward compatibility.
 
@@ -369,7 +369,7 @@ This repository can publish multiple focused Python libraries while keeping the 
 - **Why it helps adoption**: translates model scores into contract-ready decisions and financial planning scenarios.
 
 ### 4) `carevalue-benchmarks`
-- **What it does**: ships national-interest benchmark packs with synthetic population archetypes and standardized KPI reports.
+- **What it does**: ships national benchmark packs with synthetic population archetypes and standardized KPI reports.
 - **Who uses it**: public-sector pilots, researchers, implementation partners, health plans evaluating tools.
 - **Why it helps adoption**: enables apples-to-apples evaluation and easier procurement/comparison conversations.
 
@@ -378,14 +378,6 @@ This repository can publish multiple focused Python libraries while keeping the 
 - **Who uses it**: care management operations and platform engineering teams.
 - **Why it helps adoption**: provides implementation-ready, human-in-the-loop operational pathways.
 
-## National Interest Features To Add (No Deletions Required)
-
-- **State and region benchmark profiles**: evaluate performance under regional utilization and demographic shifts.
-- **Equity stress-test suite**: subgroup drift, calibration disparity checks, and fairness regression alerts.
-- **Public reporting bundle**: reproducibility manifest + model card + governance summary in one export.
-- **Episode archetype starter packs**: orthopedic, cardiac, maternity, oncology baseline episode definitions.
-- **Rural and safety-net scenario profiles**: robust simulations for under-resourced care settings.
-- **Policy KPI mapper**: maps predictions to metrics relevant for ACO-style and bundled program governance.
 
 ## How People Will Use These Libraries
 
