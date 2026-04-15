@@ -31,6 +31,7 @@ The ML pipeline is designed to **discover patterns** across modalities and time:
 - **Pharmacy signals**: distinct NDC counts per member (`distinct_ndc_count_by_member`) support **polypharmacy risk** and MTM-style prioritization features.
 - **Clinical and procedural density**: distinct ICD-10 and CPT/HCPCS counts (`diagnosis_morbidity_breadth_by_member`, `procedure_intensity_by_member`) enrich **episode scoring** and risk models.
 - **Bundled episodes**: gap-based episode construction and scoring (`episodes build` / `score`) produce **episode allowed**, span, **financial intensity**, optional **ICD/CPT breadth**, and **within-cohort severity percentiles** for contract and CMMI-style analytics.
+- **ML bundled episode engine**: train **multi-label** episode-family attribution on unified medical and pharmacy lines using **ICD-10**, **CPT/HCPCS**, **NDC**, **care_domain**, and spend buckets; emit **multi-attribution** (one claim line can attach to several episode families with calibrated probabilities); **materialize** time-bounded episode instances per family with gap rules; roll up **rendering NPI** (`rendering_npi`) to episodes by allowed amount. Industry episode groupers increasingly combine rule-based logic with ML over high-dimensional coding vocabularies ([Certilytics overview](https://www.certilytics.com/news-insights/ml-and-clinical-episode-grouping/)); this module ships a transparent **sklearn** baseline you can train on your own bundled history and extend.
 
 These features feed the existing **model suite** (risk, cost, temporal, uplift, anomaly, ranking) so teams can predict **high-cost probability**, **expected spend bands**, **behavior shifts**, and **intervention ROI proxies** while preserving subgroup fairness and model-card documentation.
 
@@ -296,6 +297,12 @@ carevalue-ml journey merge data/sample/claims_header.csv reports/journey_unified
 carevalue-ml journey monthly-features reports/journey_unified.csv
 carevalue-ml episodes build reports/journey_unified.csv --archetype orthopedic --output-path reports/episodes.csv
 carevalue-ml episodes score reports/episodes.csv --diagnosis-code-col diagnosis_code --procedure-code-col procedure_code
+
+# ML episode definitions + multi-label attribution + materialized episodes (see section below)
+carevalue-ml episodes ml-prep-training-from-gaps reports/journey_unified.csv --output-path reports/claims_labeled_bootstrap.csv
+carevalue-ml episodes ml-learn-definitions reports/claims_labeled_bootstrap.csv --episode-family-col episode_family --output-path reports/episode_ml_definitions.json
+carevalue-ml episodes ml-train reports/claims_labeled_bootstrap.csv --episode-labels-col episode_family --output-path models/bundled_episode_attribution.joblib
+carevalue-ml episodes ml-run reports/journey_unified.csv models/bundled_episode_attribution.joblib --output-dir reports/episodes_ml
 ```
 
 ### Example insurer workflows
@@ -410,6 +417,64 @@ episode_scores = score_episodes(episodes)
 scenario_report = run_contract_scenarios(member_scores, episode_scores, profile="bundled_base")
 ```
 
+## ML bundled episode engine (train, define, attribute, multi-assign)
+
+This ships in the main package as `carevalue_claims_ml.bundled_episode_engine` and in `vbc_intel_episodes` for the umbrella namespace.
+
+### How it works
+
+1. **Labels**: Provide claim-level rows with an `episode_family` (or semicolon-separated `episode_labels` for true multi-label training). If you only have raw claims, `training_frame_from_gap_bundles` / CLI `episodes ml-prep-training-from-gaps` adds `episode_id` and `episode_family` from the existing deterministic gap bundler so you can bootstrap a first model, then refine labels from analyst or grouper exports.
+2. **Definitions**: `learn_episode_definitions_from_labels` summarizes frequent **ICD prefixes**, **CPT/HCPCS prefixes**, and **NDC prefixes** per episode family — a contract-friendly companion to the ML weights (JSON via `EpisodeCodeDefinitions.save`).
+3. **Model**: `fit_bundled_episode_attribution_model` builds a **HashingVectorizer** over per-line feature text (domain, full codes, prefixes, log-bucketed allowed amount) plus **OneVsRest(LogisticRegression)** for multi-label episode families. Save/load with `BundledEpisodeAttributionModel.save` / `.load` (joblib).
+4. **Scoring**: `predict_multi_attribution` returns a **long** table: each qualifying `(claim_row_index, episode_family, attribution_probability)` above `min_probability`, so one line can appear in several episode families (**multi-attribution**).
+5. **Episode instances**: `materialize_gap_episodes_per_family` applies a **gap day** rule separately within each `(member_id, episode_family)` trajectory so you get concrete `episode_instance_id` rows and claim lines tagged to those instances. **Attributed NPI** is the rendering NPI with the largest summed allowed amount on lines in that instance (column `rendering_npi` when present).
+
+### Python example
+
+```python
+from pathlib import Path
+
+import pandas as pd
+from carevalue_claims_ml.journey_signals import merge_medical_and_pharmacy_claims
+from carevalue_claims_ml.bundled_episode_engine import (
+    learn_episode_definitions_from_labels,
+    fit_bundled_episode_attribution_model,
+    run_bundled_episode_engine,
+    training_frame_from_gap_bundles,
+)
+
+medical = pd.read_csv("medical_claim_lines.csv")   # member_id, service_date, allowed_amount, diagnosis_code, procedure_code, …
+pharmacy = pd.read_csv("pharmacy_claim_lines.csv")  # member_id, service_date, allowed_amount, ndc, …
+unified = merge_medical_and_pharmacy_claims(medical, pharmacy)
+
+# Optional bootstrap labels from gap episodes, then replace with grouper-labeled data when available
+labeled = training_frame_from_gap_bundles(unified, archetype="orthopedic", window_days=90)
+defs = learn_episode_definitions_from_labels(labeled, episode_family_col="episode_family")
+defs.save(Path("reports/episode_ml_definitions.json"))
+
+model = fit_bundled_episode_attribution_model(
+    labeled,
+    episode_labels_col="episode_family",  # or episode_labels_list_col="episode_labels" for "ortho;chf" style cells
+)
+model.save(Path("models/bundled_episode_attribution.joblib"))
+
+out = run_bundled_episode_engine(unified, model, min_probability=0.12, window_days=90)
+# out["claim_episode_attribution"]  — multi-attribution long file
+# out["episodes"]                     — episode_instance_id rollups with attributed_npi
+# out["claims_in_episodes"]          — line-level rows tied to episode_instance_id
+```
+
+### What you can do with it
+
+- **Train on historical bundles** (BPCI-style windows, commercial bundles, or internal episode grouper output) and reuse the model to **score new claims** before final grouper runs.
+- **Publish code-episode definition tables** for actuarial and contracting stakeholders alongside the model artifact.
+- **Multi-attribution reporting** for comorbid or overlapping episodes (same claim line above threshold for more than one family).
+- **Provider episode attribution** for episodes that mix professional, institutional, and pharmacy lines when `rendering_npi` is populated on medical rows.
+
+### Column expectations
+
+Training and scoring expect at least `member_id`, `service_date`, `allowed_amount`. Stronger signal when you include optional `care_domain`, `diagnosis_code`, `procedure_code`, `ndc`, and `rendering_npi` (names configurable via `claim_row_to_feature_text` / `claim_row_to_feature_text_kwargs` in code).
+
 ## First MVP Packaging Sequence
 
 To move toward publication safely and additively:
@@ -441,7 +506,15 @@ from vbc_intel_core import (
     monthly_utilization_features,
     train_model_suite,
 )
-from vbc_intel_episodes import EPISODE_ARCHETYPES, build_bundled_episodes, score_episode_risk
+from vbc_intel_episodes import (
+    EPISODE_ARCHETYPES,
+    BundledEpisodeAttributionModel,
+    build_bundled_episodes,
+    fit_bundled_episode_attribution_model,
+    learn_episode_definitions_from_labels,
+    run_bundled_episode_engine,
+    score_episode_risk,
+)
 from vbc_intel_policy import run_policy_scenarios, simulate_policy
 from vbc_intel_benchmarks import calculate_pmpm
 from vbc_intel_careops import run_agentic_pipeline

@@ -16,6 +16,13 @@ from carevalue_claims_ml.data_generation import SyntheticDataConfig, generate_sy
 from carevalue_claims_ml.db import create_db_engine, get_database_url
 from carevalue_claims_ml.etl import build_member_months, initialize_schema
 from carevalue_claims_ml.evaluation import evaluate_predictions, write_leaderboard_artifacts
+from carevalue_claims_ml.bundled_episode_engine import (
+    BundledEpisodeAttributionModel,
+    fit_bundled_episode_attribution_model,
+    learn_episode_definitions_from_labels,
+    run_bundled_episode_engine,
+    training_frame_from_gap_bundles,
+)
 from carevalue_claims_ml.episodes import build_bundled_episodes, score_episode_risk
 from carevalue_claims_ml.features import build_high_cost_label, build_member_month_features
 from carevalue_claims_ml.journey_signals import (
@@ -308,6 +315,108 @@ def episodes_score(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     scored.to_csv(output_path, index=False)
     print({"episode_scores": str(output_path), "rows": len(scored)})
+
+
+@episodes_app.command("ml-learn-definitions")
+def episodes_ml_learn_definitions(
+    labeled_claims_path: Path,
+    output_path: Path = Path("reports/episode_ml_definitions.json"),
+    episode_family_col: str = "episode_family",
+    diagnosis_code_col: str | None = "diagnosis_code",
+    procedure_code_col: str | None = "procedure_code",
+    ndc_col: str | None = "ndc",
+):
+    """
+    Mine ICD/CPT/NDC prefix patterns per episode family from historically bundled-labeled claims.
+    """
+    df = pd.read_csv(labeled_claims_path)
+    defs = learn_episode_definitions_from_labels(
+        df,
+        episode_family_col=episode_family_col,
+        diagnosis_code_col=diagnosis_code_col,
+        procedure_code_col=procedure_code_col,
+        ndc_col=ndc_col,
+    )
+    defs.save(output_path)
+    print({"episode_ml_definitions": str(output_path), "families": list(defs.by_episode_family.keys())})
+
+
+@episodes_app.command("ml-train")
+def episodes_ml_train(
+    labeled_claims_path: Path,
+    output_path: Path = Path("models/bundled_episode_attribution.joblib"),
+    episode_labels_col: str | None = None,
+    episode_labels_list_col: str | None = None,
+):
+    """
+    Train multi-label episode attribution (medical + pharmacy lines) from labeled bundles.
+    Pass --episode-labels-col for one label per row, or --episode-labels-list-col for ``a;b`` lists.
+    """
+    if (episode_labels_col is None) == (episode_labels_list_col is None):
+        print("Error: provide exactly one of --episode-labels-col or --episode-labels-list-col")
+        raise typer.Exit(code=1)
+    df = pd.read_csv(labeled_claims_path)
+    model = fit_bundled_episode_attribution_model(
+        df,
+        episode_labels_col=episode_labels_col,
+        episode_labels_list_col=episode_labels_list_col,
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    model.save(output_path)
+    print({"bundled_episode_attribution_model": str(output_path), "classes": list(model.mlb.classes_)})
+
+
+@episodes_app.command("ml-run")
+def episodes_ml_run(
+    claims_path: Path,
+    model_path: Path,
+    output_dir: Path = Path("reports/episodes_ml"),
+    min_probability: float = 0.12,
+    window_days: int = 90,
+    materialize_min_probability: float = 0.15,
+):
+    """
+    Score claims with a trained attribution model, materialize gap-based episode instances per
+    predicted family, and write multi-attribution plus episode rollup CSVs.
+    """
+    claims = pd.read_csv(claims_path)
+    model = BundledEpisodeAttributionModel.load(model_path)
+    out = run_bundled_episode_engine(
+        claims,
+        model,
+        min_probability=min_probability,
+        window_days=window_days,
+        materialize_min_probability=materialize_min_probability,
+    )
+    output_dir.mkdir(parents=True, exist_ok=True)
+    paths = {
+        "claim_episode_attribution": output_dir / "claim_episode_attribution.csv",
+        "episodes": output_dir / "episodes_ml_instances.csv",
+        "claims_in_episodes": output_dir / "claims_in_episodes.csv",
+    }
+    out["claim_episode_attribution"].to_csv(paths["claim_episode_attribution"], index=False)
+    out["episodes"].to_csv(paths["episodes"], index=False)
+    out["claims_in_episodes"].to_csv(paths["claims_in_episodes"], index=False)
+    print({k: str(v) for k, v in paths.items()})
+
+
+@episodes_app.command("ml-prep-training-from-gaps")
+def episodes_ml_prep_training_from_gaps(
+    claims_path: Path,
+    output_path: Path = Path("reports/claims_with_episode_family.csv"),
+    archetype: str = "general",
+    window_days: int = 90,
+):
+    """
+    Add episode_family derived from deterministic gap bundling — bootstrap labels for ML training.
+    """
+    claims = pd.read_csv(claims_path)
+    framed = training_frame_from_gap_bundles(
+        claims, archetype=archetype, window_days=window_days
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    framed.to_csv(output_path, index=False)
+    print({"claims_with_episode_family": str(output_path), "rows": len(framed)})
 
 
 @journey_app.command("merge")

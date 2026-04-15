@@ -16,6 +16,7 @@ def test_vbc_intel_packages_import():
     assert hasattr(vbc_intel_core, "train_model_suite")
     assert hasattr(vbc_intel_core, "merge_medical_and_pharmacy_claims")
     assert hasattr(vbc_intel_episodes, "build_bundled_episodes")
+    assert hasattr(vbc_intel_episodes, "fit_bundled_episode_attribution_model")
     assert hasattr(vbc_intel_episodes, "EPISODE_ARCHETYPES")
     assert hasattr(vbc_intel_policy, "simulate_policy")
     assert hasattr(vbc_intel_benchmarks, "calculate_pmpm")
