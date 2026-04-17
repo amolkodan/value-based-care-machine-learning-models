@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-04-15
+
+### Changed
+
+- PyPI short **description** and README title/intro: *Open Source Healthcare ML Models for Cost Reduction and Outcome Improvement*; clarify **VBC Intelligence OS** positioning for cost and outcomes under value-based and bundled contracts.
+
+[0.3.1]: https://github.com/amolkodan/value-based-care-machine-learning-models/releases/tag/v0.3.1
+
 ## [0.3.0] - 2026-04-15
 
 ### Added

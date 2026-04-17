@@ -1,6 +1,8 @@
-# Open Sourced Value Based Care ML Models
+# Open Source Healthcare ML Models for Cost Reduction and Outcome Improvement
 
-**VBC Intelligence OS** (distributed as `carevalue-claims-ml`) is an open-source, cloud-agnostic analytics and machine learning stack for organizations that operate under value-based payment, bundled episodes, and population health contracts. It is built for clinically interpretable signals derived from **longitudinal medical, institutional, and pharmacy claims**, unified into a coherent **patient journey** view for risk, cost, utilization pattern detection, and governance-ready model artifacts.
+**VBC Intelligence OS** (distributed as `carevalue-claims-ml`) is an open-source machine learning platform built for healthcare organizations that need to reduce cost of care and improve patient outcomes across value-based and bundled payment contracts.
+
+It is also a cloud-agnostic analytics stack for clinically interpretable signals derived from **longitudinal medical, institutional, and pharmacy claims**, unified into a coherent **patient journey** view for risk, cost, utilization pattern detection, and governance-ready model artifacts.
 
 The platform targets payer actuarial and VBC operations teams, health system analytics, and care-management programs that require member-month feature stores, multi-model prediction (risk, cost, temporal behavior, uplift proxies), **episode-level financial and clinical-density scoring**, policy simulation, and agentic recommendation orchestration with audit trails.
 

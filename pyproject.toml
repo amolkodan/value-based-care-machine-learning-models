@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "carevalue-claims-ml"
-version = "0.3.0"
-description = "VBC Intelligence OS: longitudinal claims, pharmacy, and diagnosis analytics for bundled episodes, patient-journey patterns, and contract-aware ML"
+version = "0.3.1"
+description = "Open Source Healthcare ML Models for Cost Reduction and Outcome Improvement"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
